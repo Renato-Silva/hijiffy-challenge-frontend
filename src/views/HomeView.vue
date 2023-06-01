@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, nextTick } from 'vue';
 import axios from '@axios'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
@@ -7,8 +7,18 @@ import { useRouter } from 'vue-router';
 
 const loading = ref(false);
 const input = ref('');
+const session = ref(null);
 const messages = ref([]);
+const messageContainer = ref(null);
 const router = useRouter();
+
+
+const scrollToBottom = () => {
+  nextTick(() => {
+    const container = messageContainer.value;
+    container.scrollTop = container.scrollHeight;
+  });
+};
 
 const ask = () => {
   if (input.value === '') {
@@ -19,6 +29,7 @@ const ask = () => {
     text: input.value,
     sent: true
   })
+  scrollToBottom()
 
   loading.value = true;
 
@@ -26,15 +37,18 @@ const ask = () => {
   input.value = ''
   
   axios.post('/ask', {
-    question: text
+    question: text,
+    chat: session.value
   }).then(r => {
-    const { message } = r.data
+    const { message, chat } = r.data
 
+    session.value = chat
     messages.value.push({
       text: message,
       sent: false
     })
 
+    scrollToBottom()
     
   }).catch(e => {
     toast.error('Error sending message', {
@@ -44,6 +58,11 @@ const ask = () => {
   }).finally(() => {
     loading.value = false
   })
+};
+
+const clear = () => {
+  messages.value = []
+  session.value = null
 };
 
 const logout = () => {
@@ -80,12 +99,20 @@ const logout = () => {
         <p class="mt-6 text-xl font-bold text-center text-gray-300 md:mt-0">
           Google Dialogflow Chat
         </p>
-        <p
-          class="mt-6 text-sm font-bold text-center text-gray-300 md:mt-0 hover:underline cursor-pointer"
-          @click="logout"
-        >
-          Logout
-        </p>
+        <div>
+          <p
+            class="text-sm font-bold text-center text-gray-300 md:mt-0 hover:underline cursor-pointer"
+            @click="clear"
+          >
+            Clear chat
+          </p>
+          <p
+            class="mt-6 text-sm font-bold text-center text-gray-300 md:mt-0 hover:underline cursor-pointer"
+            @click="logout"
+          >
+            Logout
+          </p>
+        </div>
       </div>
       <div class="bg-white md:flex-1">
         <div class="flex flex-col items-center justify-center h-full">
@@ -94,7 +121,7 @@ const logout = () => {
 
 
 
-            <div class="flex flex-col flex-grow h-0 p-4 overflow-auto">
+            <div class="flex flex-col flex-grow h-0 p-4 overflow-auto" ref="messageContainer">
               <div
                 v-for="(message, i) in messages"
                 :key="i"
