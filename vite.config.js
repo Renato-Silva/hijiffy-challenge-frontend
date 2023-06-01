@@ -11,5 +11,11 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
       '@axios': fileURLToPath(new URL('./src/plugins/axios', import.meta.url))
     }
+  },
+  server: {
+    host: '0.0.0.0',
+    hmr: {
+        host: 'localhost'
+    }
   }
 })
